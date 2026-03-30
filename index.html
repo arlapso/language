@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bevel — Translation Tool</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #000;
+      min-height: 100vh;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      min-height: 100vh;
+    }
+
+    /* Main content */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 40px;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 16px 20px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 400;
+      border: none;
+      outline: none;
+      color: #000;
+      background: #f2f2f2;
+    }
+
+    .input-row input::placeholder {
+      color: #ccc;
+    }
+
+    .input-row button {
+      padding: 0 28px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      background: #000;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.1s;
+    }
+
+    .input-row button:hover { opacity: 0.8; }
+
+    .input-row button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .input-row button:disabled:hover { opacity: 1; }
+
+    /* Results */
+    .results { display: none; }
+    .results.visible { display: block; }
+
+    .table-wrap {
+      border-top: 2px solid #000;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 32px 1fr 1fr 60px 60px;
+      align-items: baseline;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    .row:last-child { border-bottom: 2px solid #000; }
+
+    .row.header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #999;
+      padding: 10px 16px;
+      border-bottom: 1px solid #000;
+    }
+
+    .row.top1 { background: #e8e8e8; }
+    .row.top2 { background: #f0f0f0; }
+    .row.top3 { background: #f6f6f6; }
+
+    .cell.index {
+      font-size: 13px;
+      font-weight: 600;
+      color: #bbb;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .row.top1 .cell.index,
+    .row.top2 .cell.index,
+    .row.top3 .cell.index {
+      color: #000;
+    }
+
+    .cell.lang {
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    .cell.lang .native {
+      font-weight: 500;
+    }
+
+    .cell.lang .sublabel {
+      font-size: 13px;
+      color: #999;
+      font-weight: 400;
+    }
+
+    .cell.translation {
+      font-size: 13px;
+      word-break: break-word;
+      padding-right: 16px;
+      font-weight: 400;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0 0 0 10px;
+      transition: opacity 0.15s;
+      vertical-align: middle;
+      line-height: 1;
+      opacity: 0.25;
+    }
+
+    .copy-btn:hover { opacity: 0.7; }
+    .copy-btn.copied { opacity: 1; }
+
+    .copy-btn svg {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .row.top1 .cell.lang .native,
+    .row.top2 .cell.lang .native,
+    .row.top3 .cell.lang .native { font-weight: 600; }
+
+    .row.top1 .cell.translation,
+    .row.top2 .cell.translation,
+    .row.top3 .cell.translation { font-weight: 600; }
+
+    .cell.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      color: #bbb;
+      font-weight: 400;
+    }
+
+    .row.top1 .cell.num,
+    .row.top2 .cell.num,
+    .row.top3 .cell.num { color: #000; font-weight: 600; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 400;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 6px 0;
+      cursor: pointer;
+      color: #999;
+      transition: all 0.15s;
+    }
+
+    .tab:hover { color: #000; }
+    .tab.active { color: #000; font-weight: 600; border-bottom-color: #000; }
+
+    /* Skeleton loading */
+    .skeleton {
+      display: none;
+    }
+
+    .skeleton.visible { display: block; }
+
+    .skeleton .table-wrap {
+      border-top: 2px solid #000;
+    }
+
+    .skeleton .row {
+      display: grid;
+      grid-template-columns: 32px 1fr 1fr 60px 60px;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    .skeleton .row:first-child {
+      border-bottom: 1px solid #000;
+    }
+
+    .skel-bar {
+      height: 12px;
+      background: #eee;
+      animation: shimmer 1.5s infinite ease-in-out;
+    }
+
+    .skeleton .row:nth-child(2) .skel-bar { animation-delay: 0s; }
+    .skeleton .row:nth-child(3) .skel-bar { animation-delay: 0.05s; }
+    .skeleton .row:nth-child(4) .skel-bar { animation-delay: 0.1s; }
+    .skeleton .row:nth-child(5) .skel-bar { animation-delay: 0.15s; }
+    .skeleton .row:nth-child(6) .skel-bar { animation-delay: 0.2s; }
+    .skeleton .row:nth-child(7) .skel-bar { animation-delay: 0.25s; }
+    .skeleton .row:nth-child(8) .skel-bar { animation-delay: 0.3s; }
+
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 40px 0;
+      font-size: 13px;
+      color: #999;
+      line-height: 1.8;
+    }
+
+    .empty-state .langs {
+      color: #666;
+      margin-top: 8px;
+    }
+
+    /* Summary */
+    .summary {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #999;
+    }
+
+    .summary strong {
+      color: #000;
+      font-weight: 700;
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid #000;
+        padding: 24px;
+      }
+
+      .main { padding: 24px; }
+
+      .input-row input { font-size: 13px; }
+
+      .row {
+        grid-template-columns: 24px 1fr 1fr 48px 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="main">
+      <div class="input-row">
+        <input type="text" id="textInput" placeholder="start typing" autofocus>
+        <button id="translateBtn" onclick="doTranslate()">Translate</button>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <p>Type a word or phrase and press Translate.</p>
+        <p>It will be translated into 13 languages:</p>
+        <p class="langs">English, 简体中文, 繁體中文, Nederlands, Fran&ccedil;ais, Deutsch, Italiano, 日本語, Espa&ntilde;ol, Tiếng Việt, Русский, Portugu&ecirc;s, Polski</p>
+      </div>
+
+      <div class="skeleton" id="skeleton">
+        <div class="table-wrap">
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:60%"></div><div class="skel-bar" style="width:50%"></div><div></div><div></div></div>
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:70%"></div><div class="skel-bar" style="width:60%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:30%"></div></div>
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:55%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:30%"></div></div>
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:55%"></div><div class="skel-bar" style="width:45%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:30%"></div></div>
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:65%"></div><div class="skel-bar" style="width:50%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:30%"></div></div>
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:50%"></div><div class="skel-bar" style="width:65%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:30%"></div></div>
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:45%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:30%"></div></div>
+          <div class="row"><div class="cell"></div><div class="skel-bar" style="width:60%"></div><div class="skel-bar" style="width:55%"></div><div class="skel-bar" style="width:40%"></div><div class="skel-bar" style="width:30%"></div></div>
+        </div>
+      </div>
+
+      <div class="results" id="results">
+        <div class="tabs">
+          <button class="tab active" id="tabLongest" onclick="setSort(true)">Longest first</button>
+          <button class="tab" id="tabDefault" onclick="setSort(false)">Default</button>
+        </div>
+        <div class="table-wrap" id="tableBody"></div>
+        <div class="summary" id="summary"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById('textInput');
+    const btn = document.getElementById('translateBtn');
+    let lastData = null;
+    let sorted = true;
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doTranslate();
+    });
+
+    async function doTranslate() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      btn.disabled = true;
+      sorted = true;
+      document.getElementById('tabLongest').classList.add('active');
+      document.getElementById('tabDefault').classList.remove('active');
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('results').classList.remove('visible');
+      document.getElementById('skeleton').classList.add('visible');
+
+      try {
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        lastData = await res.json();
+        renderResults(lastData, sorted);
+      } catch (err) {
+        alert('Translation failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        document.getElementById('skeleton').classList.remove('visible');
+      }
+    }
+
+    function setSort(byLength) {
+      if (!lastData) return;
+      sorted = byLength;
+      document.getElementById('tabDefault').classList.toggle('active', !sorted);
+      document.getElementById('tabLongest').classList.toggle('active', sorted);
+      renderResults(lastData, sorted);
+    }
+
+    function renderResults(data, sortByLength) {
+      const tbody = document.getElementById('tableBody');
+
+      // Determine top 3 by char count
+      const byChars = [...data.translations].sort((a, b) => b.chars - a.chars);
+      const top3codes = new Set(byChars.slice(0, 3).map(t => t.code));
+      const rankMap = {};
+      byChars.forEach((t, i) => { rankMap[t.code] = i; });
+
+      const maxChars = byChars[0].chars;
+
+      // Display order
+      const displayList = sortByLength
+        ? [...data.translations].sort((a, b) => b.chars - a.chars)
+        : [...data.translations].sort((a, b) => a.language.localeCompare(b.language));
+
+      let html = `
+        <div class="row header">
+          <div class="cell">#</div>
+          <div class="cell">Translation</div>
+          <div class="cell">Language</div>
+          <div class="cell num">Chr</div>
+          <div class="cell num">Wrd</div>
+        </div>`;
+
+      displayList.forEach((t, i) => {
+        const rank = rankMap[t.code];
+        let topClass = '';
+        if (rank === 0) topClass = ' top1';
+        else if (rank === 1) topClass = ' top2';
+        else if (rank === 2) topClass = ' top3';
+
+        const escaped = esc(t.translation);
+        html += `
+          <div class="row${topClass}">
+            <div class="cell index">${String(i + 1).padStart(2, '0')}</div>
+            <div class="cell translation">${escaped}<button class="copy-btn" onclick="copyText(this, '${escaped.replace(/'/g, "\\'")}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div>
+            <div class="cell lang">
+              <span class="native">${esc(t.native_name)}</span>
+              <span class="sublabel"> ${esc(t.language)}</span>
+            </div>
+            <div class="cell num">${t.chars}</div>
+            <div class="cell num">${t.words}</div>
+          </div>`;
+      });
+
+      tbody.innerHTML = html;
+
+      const longest = byChars[0];
+      document.getElementById('summary').innerHTML =
+        `Longest &mdash; <strong>${esc(longest.native_name)}</strong> ` +
+        `${longest.chars} characters, ${longest.words} words`;
+
+      document.getElementById('results').classList.add('visible');
+    }
+
+    function copyText(btn, text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+        btn.classList.remove('copied');
+      }, 1500);
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+  </script>
+</body>
+</html>

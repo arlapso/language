@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 translate.py \"Hello, how are you?\")",
+      "Bash(pip3 install:*)",
+      "Bash(python3 -c \"from deep_translator import GoogleTranslator; print\\(''ok''\\)\")",
+      "Bash(python3 translate.py \"Settings\")",
+      "Bash(python3 -c \"import site; site.addsitedir\\(site.getusersitepackages\\(\\)\\); import flask; print\\(''flask ok''\\)\")",
+      "Bash(kill %1)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(xargs kill:*)"
+    ]
+  }
+}
