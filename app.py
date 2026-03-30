@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Bevel Translation Tool — Web Interface"""
 
-import site
-site.addsitedir(site.getusersitepackages())
+import os
+
+try:
+    import site as _site
+    _site.addsitedir(_site.getusersitepackages())
+except Exception:
+    pass
 
 from flask import Flask, request, jsonify, send_from_directory
 from deep_translator import GoogleTranslator
-import os
 
 app = Flask(__name__)
 
@@ -71,4 +75,5 @@ def translate():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
-    app.run(debug=True, port=port)
+    debug = os.environ.get("FLASK_ENV") == "development"
+    app.run(debug=debug, host="0.0.0.0", port=port)
