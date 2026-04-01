@@ -2,6 +2,7 @@
 """Bevel Translation Tool — Web Interface"""
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     import site as _site
@@ -45,26 +46,23 @@ def translate():
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    results = []
-    for code, label, native in LANGUAGES:
-        if code == "en":
-            translated = text
-        else:
-            try:
-                translated = GoogleTranslator(source="en", target=code).translate(text)
-            except Exception as e:
-                translated = f"[error: {e}]"
-
-        chars = len(translated)
-        words = len(translated.split())
-        results.append({
+    def translate_one(lang):
+        code, label, native = lang
+        try:
+            translated = GoogleTranslator(source="auto", target=code).translate(text)
+        except Exception as e:
+            translated = f"[error: {e}]"
+        return {
             "code": code,
             "language": label,
             "native_name": native,
             "translation": translated,
-            "chars": chars,
-            "words": words,
-        })
+            "chars": len(translated),
+            "words": len(translated.split()),
+        }
+
+    with ThreadPoolExecutor(max_workers=13) as pool:
+        results = list(pool.map(translate_one, LANGUAGES))
 
     longest = max(results, key=lambda r: r["chars"])
 
